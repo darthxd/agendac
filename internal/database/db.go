@@ -49,3 +49,11 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	// retorna o pointer do gorm.DB
 	return db, nil
 }
+
+func Close(db *gorm.DB) error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
+}
