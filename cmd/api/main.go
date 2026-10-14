@@ -11,6 +11,7 @@ import (
 
 	"github.com/darthxd/agendac/internal/config"
 	"github.com/darthxd/agendac/internal/database"
+	"github.com/darthxd/agendac/internal/middleware"
 	"github.com/darthxd/agendac/pkg/logger"
 	"github.com/labstack/echo/v5"
 )
@@ -38,6 +39,9 @@ func run() error {
 	defer database.Close(db)
 
 	e := echo.New()
+	e.Logger = log
+	e.Use(middleware.Logger(log))
+
 	e.GET("/health", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
@@ -48,6 +52,8 @@ func run() error {
 
 	sc := echo.StartConfig{
 		Address:         ":" + cfg.Port,
+		HideBanner:      false,
+		HidePort:        false,
 		GracefulTimeout: 5 * time.Second,
 	}
 
