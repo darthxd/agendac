@@ -12,6 +12,7 @@ import (
 	"github.com/darthxd/agendac/internal/config"
 	"github.com/darthxd/agendac/internal/database"
 	"github.com/darthxd/agendac/internal/middleware"
+	"github.com/darthxd/agendac/internal/user"
 	"github.com/darthxd/agendac/pkg/logger"
 	"github.com/labstack/echo/v5"
 )
@@ -38,6 +39,10 @@ func run() error {
 	}
 	defer database.Close(db)
 
+	if err := database.Migrate(db, &user.User{}); err != nil {
+		return err
+	}
+
 	e := echo.New()
 	e.Logger = log
 	e.Use(middleware.Logger(log))
@@ -45,6 +50,9 @@ func run() error {
 	e.GET("/health", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
+
+	api := e.Group("/api/v1")
+	user.NewHandler(db).RegisterRoutes(api)
 
 	// graceful shutdown (espera as requisições em andamento serem concluídas antes de sair)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

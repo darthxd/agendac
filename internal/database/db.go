@@ -50,10 +50,15 @@ func Connect(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
+// função para fechar a conexão com o banco de dados
 func Close(db *gorm.DB) error {
 	sqlDB, err := db.DB()
 	if err != nil {
 		return err
 	}
 	return sqlDB.Close()
+}
+
+func Migrate(db *gorm.DB, models ...any) error {
+	return db.AutoMigrate(models...)
 }
