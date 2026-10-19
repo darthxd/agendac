@@ -7,6 +7,10 @@ const (
 	AdminRole   = "admin"
 )
 
+func validRole(role string) bool {
+	return role == DefaultRole || role == AdminRole
+}
+
 // entidade user
 type User struct {
 	gorm.Model
@@ -29,4 +33,20 @@ type UpdateRequest struct {
 	Email    *string `json:"email"`
 	Password *string `json:"password"`
 	Role     *string `json:"role"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	User
+	Token string `json:"token"`
+}
+
+type RegisterRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }

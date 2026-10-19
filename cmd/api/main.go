@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/darthxd/agendac/internal/auth"
 	"github.com/darthxd/agendac/internal/config"
 	"github.com/darthxd/agendac/internal/database"
 	"github.com/darthxd/agendac/internal/middleware"
@@ -49,6 +50,11 @@ func run() error {
 
 	e.GET("/health", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+	})
+
+	auth.Use(auth.JwtConfig{
+		JwtSecret:     cfg.JWTSecret,
+		JwtExpiration: cfg.JWTExpiration,
 	})
 
 	api := e.Group("/api/v1")
