@@ -5,24 +5,26 @@ import (
 	"net/http"
 
 	"github.com/darthxd/agendac/internal/auth"
+	echojwt "github.com/labstack/echo-jwt/v5"
 	"github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type Handler struct {
-	db *gorm.DB
+	db  *gorm.DB
+	key string
 }
 
-func NewHandler(db *gorm.DB) *Handler {
-	return &Handler{db: db}
+func NewHandler(db *gorm.DB, key string) *Handler {
+	return &Handler{db: db, key: key}
 }
 
 func (h *Handler) RegisterRoutes(api *echo.Group) {
 	users := api.Group("/users")
 
 	users.GET("", h.getAll)
-	users.GET("/:id", h.getOne)
+	users.GET("/:id", h.getOne, echojwt.WithConfig(echojwt.Config{SigningKey: []byte(h.key)}))
 	users.POST("", h.create)
 	users.PUT("/:id", h.update)
 	users.DELETE("/:id", h.delete)

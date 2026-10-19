@@ -52,13 +52,13 @@ func run() error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
-	auth.Use(auth.JwtConfig{
+	auth.WithConfig(auth.JwtConfig{
 		JwtSecret:     cfg.JWTSecret,
 		JwtExpiration: cfg.JWTExpiration,
 	})
 
 	api := e.Group("/api/v1")
-	user.NewHandler(db).RegisterRoutes(api)
+	user.NewHandler(db, cfg.JWTSecret).RegisterRoutes(api)
 
 	// graceful shutdown (espera as requisições em andamento serem concluídas antes de sair)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

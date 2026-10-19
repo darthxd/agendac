@@ -16,7 +16,7 @@ var (
 	expiration *time.Duration
 )
 
-func Use(cfg JwtConfig) {
+func WithConfig(cfg JwtConfig) {
 	secret = &cfg.JwtSecret
 	expiration = &cfg.JwtExpiration
 }
@@ -24,8 +24,8 @@ func Use(cfg JwtConfig) {
 func GenerateToken(id uint, role string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":  id,
-		"exp":  time.Now().Add(*expiration),
-		"iat":  time.Now(),
+		"exp":  time.Now().Add(*expiration).Unix(),
+		"iat":  time.Now().Unix(),
 		"role": role,
 	}
 
