@@ -21,10 +21,13 @@ func NewHandler(db *gorm.DB, key string) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(api *echo.Group) {
-	users := api.Group("/users")
+	cfg := echojwt.Config{SigningKey: []byte(h.key)}
+
+	users := api.Group("/users", echojwt.WithConfig(cfg))
 
 	users.GET("", h.getAll)
-	users.GET("/:id", h.getOne, echojwt.WithConfig(echojwt.Config{SigningKey: []byte(h.key)}))
+	users.GET("/:id", h.getOne)
+	users.GET("/me", h.getMe)
 	users.POST("", h.create)
 	users.PUT("/:id", h.update)
 	users.DELETE("/:id", h.delete)
@@ -46,6 +49,10 @@ func (h *Handler) getAll(c *echo.Context) error {
 
 // GET /users/:id -> retorna o user com o id passado na url
 func (h *Handler) getOne(c *echo.Context) error {
+	if err := verifyAdmin(h.db, c); err != nil {
+		return err
+	}
+
 	id, err := parseId(c)
 	if err != nil {
 		return err
@@ -59,8 +66,22 @@ func (h *Handler) getOne(c *echo.Context) error {
 	return c.JSON(http.StatusOK, u)
 }
 
+// GET /users/me -> retorna o usuário salvo no jwt da requisição
+func (h *Handler) getMe(c *echo.Context) error {
+	me, err := parseMe(h.db, c)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, me)
+}
+
 // POST /users -> cria um novo user e o retorna
 func (h *Handler) create(c *echo.Context) error {
+	if err := verifyAdmin(h.db, c); err != nil {
+		return err
+	}
+
 	var r CreateRequest
 	if err := c.Bind(&r); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "corpo da requisição inválido")
@@ -81,6 +102,18 @@ func (h *Handler) update(c *echo.Context) error {
 		return err
 	}
 
+	// verifica se o usuário esta tentando editar ele mesmo. se não, verifica status de admin
+	me, err := parseMe(h.db, c)
+	if err != nil {
+		return err
+	}
+
+	if id != me.ID {
+		if err := verifyAdmin(h.db, c); err != nil {
+			return err
+		}
+	}
+
 	var r UpdateRequest
 	if err := c.Bind(&r); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "corpo da requisição inválido")
@@ -96,6 +129,10 @@ func (h *Handler) update(c *echo.Context) error {
 
 // DELETE /users/:id -> deleta o user com o id passado na url
 func (h *Handler) delete(c *echo.Context) error {
+	if err := verifyAdmin(h.db, c); err != nil {
+		return err
+	}
+
 	id, err := parseId(c)
 	if err != nil {
 		return err

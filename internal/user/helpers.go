@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -21,6 +22,47 @@ func parseId(c *echo.Context) (uint, error) {
 	return uint(id), nil
 }
 
+// recupera as claims do token jwt
+func parseClaims(c *echo.Context) (jwt.MapClaims, error) {
+	token, err := echo.ContextGet[*jwt.Token](c, "user")
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, "erro ao recuperar as claims do token jwt")
+	}
+	return token.Claims.(jwt.MapClaims), nil
+}
+
+// recupera os dados do usuário registrado no token jwt
+func parseMe(db *gorm.DB, c *echo.Context) (*User, error) {
+	claims, err := parseClaims(c)
+	if err != nil {
+		return nil, err
+	}
+
+	idf, ok := claims["user_id"].(float64)
+	if !ok {
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, "erro ao recuperar o user_id do jwt")
+	}
+
+	u, err := getById(db, uint(idf))
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
+}
+
+// verifica status de admin
+func verifyAdmin(db *gorm.DB, c *echo.Context) error {
+	me, err := parseMe(db, c)
+	if err != nil {
+		return err
+	}
+	if !me.isAdmin() {
+		return echo.NewHTTPError(http.StatusUnauthorized, "você não tem permissão para acessar esse conteúdo")
+	}
+	return nil
+}
+
 // retorna o user pelo id
 func getById(db *gorm.DB, id uint) (*User, error) {
 	var u User
@@ -30,6 +72,7 @@ func getById(db *gorm.DB, id uint) (*User, error) {
 	return &u, nil
 }
 
+// retorna o user pelo email
 func getByEmail(db *gorm.DB, email string) (*User, error) {
 	var u User
 	if err := db.Where(&User{Email: email}).First(&u).Error; err != nil {
@@ -128,6 +171,7 @@ func updateUser(db *gorm.DB, id uint, r UpdateRequest) (*User, error) {
 	return u, nil
 }
 
+// parte lógica para registrar o user
 func registerUser(db *gorm.DB, r RegisterRequest) (*User, error) {
 	if r.Name == "" {
 		return nil, echo.NewHTTPError(http.StatusBadRequest, "nome é obrigatório")

@@ -22,13 +22,11 @@ func WithConfig(cfg JwtConfig) {
 }
 
 func GenerateToken(id uint, role string) (string, error) {
-	claims := jwt.MapClaims{
-		"sub":  id,
-		"exp":  time.Now().Add(*expiration).Unix(),
-		"iat":  time.Now().Unix(),
-		"role": role,
+	claims := &jwt.MapClaims{
+		"user_id": id,
+		"exp":     jwt.NewNumericDate(time.Now().Add(*expiration)),
+		"iat":     jwt.NewNumericDate(time.Now()),
 	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return token.SignedString([]byte(*secret))

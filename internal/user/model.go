@@ -11,13 +11,18 @@ func validRole(role string) bool {
 	return role == DefaultRole || role == AdminRole
 }
 
+func (u User) isAdmin() bool {
+	return u.Role == AdminRole
+}
+
 // entidade user
 type User struct {
 	gorm.Model
-	Name     string `gorm:"size:100;not null" json:"name"`
-	Email    string `gorm:"size:255;uniqueIndex;not null" json:"email"`
-	Password string `gorm:"size:255;not null" json:"-"`
-	Role     string `gorm:"size:20;not null;default:default" json:"role"`
+	DeletedAt gorm.DeletedAt `gorm:"uniqueIndex:idx_email_deleted"`
+	Name      string         `gorm:"size:100;not null" json:"name"`
+	Email     string         `gorm:"size:255;uniqueIndex:idx_email_deleted;not null" json:"email"`
+	Password  string         `gorm:"size:255;not null" json:"-"`
+	Role      string         `gorm:"size:20;not null;default:default" json:"role"`
 }
 
 // dtos
