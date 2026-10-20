@@ -30,6 +30,7 @@ func (h *Handler) RegisterRoutes(api *echo.Group) {
 	users.GET("/me", h.getMe)
 	users.POST("", h.create)
 	users.PUT("/:id", h.update)
+	users.PUT("/me", h.updateMe)
 	users.DELETE("/:id", h.delete)
 
 	auth := api.Group("/auth")
@@ -37,17 +38,49 @@ func (h *Handler) RegisterRoutes(api *echo.Group) {
 	auth.POST("/register", h.register)
 }
 
-// GET /users -> retorna todos os users
+// getAll godoc
+//
+//	@Summary		Listar usuários
+//	@Description	Retorna uma lista com todos os usuários cadastrados
+//	@Tags			users
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{array}		UserResponse
+//	@Failure		401	{object}	ErrorResponse
+//	@Failure		500	{object}	ErrorResponse
+//	@Router			/users [get]
 func (h *Handler) getAll(c *echo.Context) error {
 	var users []User
 	if err := h.db.Find(&users).Error; err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, users)
+	res := make([]UserResponse, len(users))
+	for i, u := range users {
+		res[i] = UserResponse{
+			ID:    u.ID,
+			Name:  u.Name,
+			Email: u.Email,
+			Role:  u.Role,
+		}
+	}
+
+	return c.JSON(http.StatusOK, res)
 }
 
-// GET /users/:id -> retorna o user com o id passado na url
+// getOne godoc
+//
+//	@Summary		Buscar usuário por id
+//	@Description	Retorna o usuário com o id passado na url. Requer permissão de admin
+//	@Tags			users
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"ID do usuário"
+//	@Success		200	{object}	UserResponse
+//	@Failure		400	{object}	ErrorResponse
+//	@Failure		401	{object}	ErrorResponse
+//	@Failure		404	{object}	ErrorResponse
+//	@Router			/users/{id} [get]
 func (h *Handler) getOne(c *echo.Context) error {
 	if err := verifyAdmin(h.db, c); err != nil {
 		return err
@@ -66,7 +99,18 @@ func (h *Handler) getOne(c *echo.Context) error {
 	return c.JSON(http.StatusOK, u)
 }
 
-// GET /users/me -> retorna o usuário salvo no jwt da requisição
+// getMe godoc
+//
+//	@Summary		Buscar usuário autenticado
+//	@Description	Retorna o usuário salvo no jwt da requisição
+//	@Tags			users
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	UserResponse
+//	@Failure		401	{object}	ErrorResponse
+//	@Failure		404	{object}	ErrorResponse
+//	@Failure		500	{object}	ErrorResponse
+//	@Router			/users/me [get]
 func (h *Handler) getMe(c *echo.Context) error {
 	me, err := parseMe(h.db, c)
 	if err != nil {
@@ -76,7 +120,20 @@ func (h *Handler) getMe(c *echo.Context) error {
 	return c.JSON(http.StatusOK, me)
 }
 
-// POST /users -> cria um novo user e o retorna
+// create godoc
+//
+//	@Summary		Criar usuário
+//	@Description	Cria um novo usuário e o retorna. Requer permissão de admin
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		CreateRequest	true	"Dados do usuário"
+//	@Success		201		{object}	UserResponse
+//	@Failure		400		{object}	ErrorResponse
+//	@Failure		401		{object}	ErrorResponse
+//	@Failure		409		{object}	ErrorResponse
+//	@Router			/users [post]
 func (h *Handler) create(c *echo.Context) error {
 	if err := verifyAdmin(h.db, c); err != nil {
 		return err
@@ -92,26 +149,40 @@ func (h *Handler) create(c *echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusCreated, u)
+	res := UserResponse{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+		Role:  u.Role,
+	}
+
+	return c.JSON(http.StatusCreated, res)
 }
 
-// PUT /users/:id -> encontra o user com o id passado na url, atualiza com os dados da requisição e o retorna
+// update godoc
+//
+//	@Summary		Atualizar usuário
+//	@Description	Atualiza o usuário com o id passado na url e o retorna. Requer permissão de admin
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int				true	"ID do usuário"
+//	@Param			request	body		UpdateRequest	true	"Campos a serem atualizados"
+//	@Success		200		{object}	UserResponse
+//	@Failure		400		{object}	ErrorResponse
+//	@Failure		401		{object}	ErrorResponse
+//	@Failure		404		{object}	ErrorResponse
+//	@Failure		409		{object}	ErrorResponse
+//	@Router			/users/{id} [put]
 func (h *Handler) update(c *echo.Context) error {
+	if err := verifyAdmin(h.db, c); err != nil {
+		return err
+	}
+
 	id, err := parseId(c)
 	if err != nil {
 		return err
-	}
-
-	// verifica se o usuário esta tentando editar ele mesmo. se não, verifica status de admin
-	me, err := parseMe(h.db, c)
-	if err != nil {
-		return err
-	}
-
-	if id != me.ID {
-		if err := verifyAdmin(h.db, c); err != nil {
-			return err
-		}
 	}
 
 	var r UpdateRequest
@@ -124,10 +195,65 @@ func (h *Handler) update(c *echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, u)
+	res := UserResponse{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+		Role:  u.Role,
+	}
+
+	return c.JSON(http.StatusOK, res)
 }
 
-// DELETE /users/:id -> deleta o user com o id passado na url
+// updateMe godoc
+//
+//	@Summary		Atualizar usuário autenticado
+//	@Description	Atualiza o usuário salvo no jwt da requisição. Um usuário só pode alterar seu role caso ele mesmo seja admin
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		UpdateRequest	true	"Campos a serem atualizados"
+//	@Success		200		{object}	UserResponse
+//	@Failure		400		{object}	ErrorResponse
+//	@Failure		401		{object}	ErrorResponse
+//	@Failure		404		{object}	ErrorResponse
+//	@Failure		409		{object}	ErrorResponse
+//	@Router			/users/me [put]
+func (h *Handler) updateMe(c *echo.Context) error {
+	var r UpdateRequest
+	if err := c.Bind(&r); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "corpo da requisição inválido")
+	}
+
+	me, err := updateUserMe(h.db, c, r)
+	if err != nil {
+		return err
+	}
+
+	res := UserResponse{
+		ID:    me.ID,
+		Name:  me.Name,
+		Email: me.Email,
+		Role:  me.Role,
+	}
+
+	return c.JSON(http.StatusOK, res)
+}
+
+// delete godoc
+//
+//	@Summary		Deletar usuário
+//	@Description	Deleta o usuário com o id passado na url. Requer permissão de admin
+//	@Tags			users
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"ID do usuário"
+//	@Success		200	{object}	MessageResponse
+//	@Failure		400	{object}	ErrorResponse
+//	@Failure		401	{object}	ErrorResponse
+//	@Failure		404	{object}	ErrorResponse
+//	@Router			/users/{id} [delete]
 func (h *Handler) delete(c *echo.Context) error {
 	if err := verifyAdmin(h.db, c); err != nil {
 		return err
@@ -150,7 +276,18 @@ func (h *Handler) delete(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"message": fmt.Sprintf("usuário com id %d deletado com sucesso", id)})
 }
 
-// POST /auth/login -> faz o login do usuário recebendo email e senha e retornando o usuário e o token jwt
+// login godoc
+//
+//	@Summary		Login
+//	@Description	Faz o login do usuário recebendo email e senha e retorna o usuário e o token jwt
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		LoginRequest	true	"Credenciais"
+//	@Success		200		{object}	LoginResponse
+//	@Failure		400		{object}	ErrorResponse
+//	@Failure		404		{object}	ErrorResponse
+//	@Router			/auth/login [post]
 func (h *Handler) login(c *echo.Context) error {
 	var r LoginRequest
 	if err := c.Bind(&r); err != nil {
@@ -170,13 +307,31 @@ func (h *Handler) login(c *echo.Context) error {
 		return err
 	}
 
+	res := UserResponse{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+		Role:  u.Role,
+	}
+
 	return c.JSON(http.StatusOK, LoginResponse{
-		User:  *u,
-		Token: token,
+		UserResponse: res,
+		Token:        token,
 	})
 }
 
-// POST /auth/register -> faz o registro do usuário, mas sempre com role default, e o retorna
+// register godoc
+//
+//	@Summary		Registrar usuário
+//	@Description	Faz o registro do usuário, sempre com role default, e o retorna
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		RegisterRequest	true	"Dados do usuário"
+//	@Success		201		{object}	UserResponse
+//	@Failure		400		{object}	ErrorResponse
+//	@Failure		409		{object}	ErrorResponse
+//	@Router			/auth/register [post]
 func (h *Handler) register(c *echo.Context) error {
 	var r RegisterRequest
 	if err := c.Bind(&r); err != nil {
@@ -188,5 +343,12 @@ func (h *Handler) register(c *echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusCreated, u)
+	res := UserResponse{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+		Role:  u.Role,
+	}
+
+	return c.JSON(http.StatusCreated, res)
 }

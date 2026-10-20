@@ -122,7 +122,7 @@ func createUser(db *gorm.DB, r CreateRequest) (*User, error) {
 	return u, nil
 }
 
-// parte lógica para atualizar o user
+// parte lógica para atualizar o user pelo id
 func updateUser(db *gorm.DB, id uint, r UpdateRequest) (*User, error) {
 	u, err := getById(db, id)
 	if err != nil {
@@ -156,7 +156,7 @@ func updateUser(db *gorm.DB, id uint, r UpdateRequest) (*User, error) {
 		updates["password"] = hash
 	}
 	if r.Role != nil {
-		if *r.Role != DefaultRole && *r.Role != AdminRole {
+		if !validRole(*r.Role) {
 			return nil, echo.NewHTTPError(http.StatusBadRequest, "role inválido")
 		}
 		updates["role"] = r.Role
@@ -166,9 +166,62 @@ func updateUser(db *gorm.DB, id uint, r UpdateRequest) (*User, error) {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, echo.NewHTTPError(http.StatusConflict, "email já cadastrado")
 		}
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("erro desconhecido: %s", err))
 	}
 
 	return u, nil
+}
+
+// parte lógica para atualizar o user registrado no token jwt
+func updateUserMe(db *gorm.DB, c *echo.Context, r UpdateRequest) (*User, error) {
+	me, err := parseMe(db, c)
+	if err != nil {
+		return nil, err
+	}
+
+	updates := map[string]any{}
+	if r.Name != nil {
+		name := strings.TrimSpace(*r.Name)
+		if name == "" {
+			return nil, echo.NewHTTPError(http.StatusBadRequest, "nome inválido")
+		}
+		updates["name"] = name
+	}
+	if r.Email != nil {
+		email := strings.ToLower(strings.TrimSpace(*r.Email))
+		if email == "" {
+			return nil, echo.NewHTTPError(http.StatusBadRequest, "email inválido")
+		}
+		updates["email"] = email
+	}
+	if r.Password != nil {
+		name := strings.TrimSpace(*r.Password)
+		if name == "" {
+			return nil, echo.NewHTTPError(http.StatusBadRequest, "senha inválida")
+		}
+		hash, err := bcrypt.GenerateFromPassword([]byte(*r.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		updates["password"] = hash
+	}
+	if me.isAdmin() {
+		if r.Role != nil {
+			if !validRole(*r.Role) {
+				return nil, echo.NewHTTPError(http.StatusBadRequest, "role inválido")
+			}
+			updates["role"] = r.Role
+		}
+	}
+
+	if err := db.Model(&me).Updates(updates).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, echo.NewHTTPError(http.StatusConflict, "email já cadastrado")
+		}
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("erro desconhecido: %s", err))
+	}
+
+	return me, nil
 }
 
 // parte lógica para registrar o user

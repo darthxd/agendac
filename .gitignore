@@ -1,4 +1,5 @@
 .env
+swagger.bat
 *.db
 *.db-shm
 *.db-wal

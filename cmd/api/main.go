@@ -16,8 +16,20 @@ import (
 	"github.com/darthxd/agendac/internal/user"
 	"github.com/darthxd/agendac/pkg/logger"
 	"github.com/labstack/echo/v5"
+
+	_ "github.com/darthxd/agendac/docs"
+	echoSwagger "github.com/swaggo/echo-swagger/v2"
 )
 
+// @title						ApiAgenda
+// @version					1.0
+// @description				API de agenda para PI-II.
+// @BasePath					/api/v1
+//
+// @securityDefinitions.apikey	BearerAuth
+// @in							header
+// @name						Authorization
+// @description				Informe o token JWT no formato: Bearer {token}
 func main() {
 	if err := run(); err != nil {
 		slog.Error("aplicação encerrada com erro", "error", err)
@@ -51,6 +63,8 @@ func run() error {
 	e.GET("/health", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
+
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	auth.WithConfig(auth.JwtConfig{
 		JwtSecret:     cfg.JWTSecret,

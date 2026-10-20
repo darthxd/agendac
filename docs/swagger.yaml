@@ -1,0 +1,416 @@
+basePath: /api/v1
+definitions:
+  internal_user.CreateRequest:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+      name:
+        example: João Silva
+        type: string
+      password:
+        example: senha123
+        type: string
+      role:
+        enum:
+        - default
+        - admin
+        example: default
+        type: string
+    type: object
+  internal_user.ErrorResponse:
+    properties:
+      message:
+        example: descrição do erro
+        type: string
+    type: object
+  internal_user.LoginRequest:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+      password:
+        example: senha123
+        type: string
+    type: object
+  internal_user.LoginResponse:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: João Silva
+        type: string
+      role:
+        example: default
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  internal_user.MessageResponse:
+    properties:
+      message:
+        example: usuário com id 1 deletado com sucesso
+        type: string
+    type: object
+  internal_user.RegisterRequest:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+      name:
+        example: João Silva
+        type: string
+      password:
+        example: senha123
+        type: string
+    type: object
+  internal_user.UpdateRequest:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+      name:
+        example: João Silva
+        type: string
+      password:
+        example: novaSenha123
+        type: string
+      role:
+        enum:
+        - default
+        - admin
+        example: default
+        type: string
+    type: object
+  internal_user.UserResponse:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: João Silva
+        type: string
+      role:
+        example: default
+        type: string
+    type: object
+info:
+  contact: {}
+  description: API de agenda para PI-II.
+  title: ApiAgenda
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Faz o login do usuário recebendo email e senha e retorna o usuário
+        e o token jwt
+      parameters:
+      - description: Credenciais
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_user.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_user.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Faz o registro do usuário, sempre com role default, e o retorna
+      parameters:
+      - description: Dados do usuário
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_user.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+      summary: Registrar usuário
+      tags:
+      - auth
+  /users:
+    get:
+      description: Retorna uma lista com todos os usuários cadastrados
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_user.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar usuários
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Cria um novo usuário e o retorna. Requer permissão de admin
+      parameters:
+      - description: Dados do usuário
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_user.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar usuário
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      description: Deleta o usuário com o id passado na url. Requer permissão de admin
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_user.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletar usuário
+      tags:
+      - users
+    get:
+      description: Retorna o usuário com o id passado na url. Requer permissão de
+        admin
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar usuário por id
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Atualiza o usuário com o id passado na url e o retorna. Requer
+        permissão de admin
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Campos a serem atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_user.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar usuário
+      tags:
+      - users
+  /users/me:
+    get:
+      description: Retorna o usuário salvo no jwt da requisição
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_user.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar usuário autenticado
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Atualiza o usuário salvo no jwt da requisição. Um usuário só pode
+        alterar seu role caso ele mesmo seja admin
+      parameters:
+      - description: Campos a serem atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_user.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_user.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualizar usuário autenticado
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'Informe o token JWT no formato: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
