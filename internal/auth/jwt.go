@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/labstack/echo/v5"
 )
 
 type JwtConfig struct {
@@ -21,7 +22,8 @@ func WithConfig(cfg JwtConfig) {
 	expiration = &cfg.JwtExpiration
 }
 
-func GenerateToken(id uint, role string) (string, error) {
+// gera o token jwt
+func GenerateToken(id uint) (string, error) {
 	claims := &jwt.MapClaims{
 		"user_id": id,
 		"exp":     jwt.NewNumericDate(time.Now().Add(*expiration)),
@@ -30,4 +32,13 @@ func GenerateToken(id uint, role string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return token.SignedString([]byte(*secret))
+}
+
+// recupera as claims do token jwt
+func ParseClaims(c *echo.Context) (jwt.MapClaims, error) {
+	token, err := echo.ContextGet[*jwt.Token](c, "user")
+	if err != nil {
+		return nil, err
+	}
+	return token.Claims.(jwt.MapClaims), nil
 }

@@ -3,15 +3,46 @@ package user
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/darthxd/agendac/internal/auth"
 	"github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+// gera o usuário padrão admin caso não exista nenhum usuário no sistema
+func SeedAdmin(db *gorm.DB) error {
+	var c int64
+	if err := db.Model(&User{}).Count(&c).Error; err != nil {
+		return err
+	}
+	if c > 0 {
+		return nil
+	}
+
+	password, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	admin := User{
+		Name:     "admin",
+		Email:    "admin@admin.com",
+		Password: string(password),
+		Role:     AdminRole,
+	}
+
+	if err := db.Create(&admin).Error; err != nil {
+		return err
+	}
+
+	slog.Info("usuário admin criado com sucesso")
+	return nil
+}
 
 // recupera o id passado na url da requisição
 func parseId(c *echo.Context) (uint, error) {
@@ -22,20 +53,11 @@ func parseId(c *echo.Context) (uint, error) {
 	return uint(id), nil
 }
 
-// recupera as claims do token jwt
-func parseClaims(c *echo.Context) (jwt.MapClaims, error) {
-	token, err := echo.ContextGet[*jwt.Token](c, "user")
+// recupera os dados do usuário salvo no token jwt
+func ParseUser(db *gorm.DB, c *echo.Context) (*User, error) {
+	claims, err := auth.ParseClaims(c)
 	if err != nil {
 		return nil, echo.NewHTTPError(http.StatusInternalServerError, "erro ao recuperar as claims do token jwt")
-	}
-	return token.Claims.(jwt.MapClaims), nil
-}
-
-// recupera os dados do usuário registrado no token jwt
-func parseMe(db *gorm.DB, c *echo.Context) (*User, error) {
-	claims, err := parseClaims(c)
-	if err != nil {
-		return nil, err
 	}
 
 	idf, ok := claims["user_id"].(float64)
@@ -43,7 +65,7 @@ func parseMe(db *gorm.DB, c *echo.Context) (*User, error) {
 		return nil, echo.NewHTTPError(http.StatusInternalServerError, "erro ao recuperar o user_id do jwt")
 	}
 
-	u, err := getById(db, uint(idf))
+	u, err := GetById(db, uint(idf))
 	if err != nil {
 		return nil, err
 	}
@@ -51,20 +73,16 @@ func parseMe(db *gorm.DB, c *echo.Context) (*User, error) {
 	return u, nil
 }
 
-// verifica status de admin
-func verifyAdmin(db *gorm.DB, c *echo.Context) error {
-	me, err := parseMe(db, c)
-	if err != nil {
-		return err
-	}
-	if !me.isAdmin() {
+// verifica role do usuário e retorna erro caso não seja admin
+func (u User) VerifyAdmin() error {
+	if !u.IsAdmin() {
 		return echo.NewHTTPError(http.StatusUnauthorized, "você não tem permissão para acessar esse conteúdo")
 	}
 	return nil
 }
 
 // retorna o user pelo id
-func getById(db *gorm.DB, id uint) (*User, error) {
+func GetById(db *gorm.DB, id uint) (*User, error) {
 	var u User
 	if err := db.First(&u, id).Error; err != nil {
 		return nil, echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("usuário com id %d não encontrado", id))
@@ -81,7 +99,7 @@ func getByEmail(db *gorm.DB, email string) (*User, error) {
 	return &u, nil
 }
 
-// parte lógica para criar o user
+// cria o user usando CreateRequest e o retorna
 func createUser(db *gorm.DB, r CreateRequest) (*User, error) {
 	if r.Name == "" {
 		return nil, echo.NewHTTPError(http.StatusBadRequest, "nome é obrigatório")
@@ -94,7 +112,7 @@ func createUser(db *gorm.DB, r CreateRequest) (*User, error) {
 	}
 	role := DefaultRole
 	if r.Role != "" {
-		if !validRole(r.Role) {
+		if !ValidRole(r.Role) {
 			return nil, echo.NewHTTPError(http.StatusBadRequest, "role inválido")
 		}
 		role = r.Role
@@ -122,9 +140,9 @@ func createUser(db *gorm.DB, r CreateRequest) (*User, error) {
 	return u, nil
 }
 
-// parte lógica para atualizar o user pelo id
+// atualiza o user recebendo um id e UpdateRequest e o retorna
 func updateUser(db *gorm.DB, id uint, r UpdateRequest) (*User, error) {
-	u, err := getById(db, id)
+	u, err := GetById(db, id)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +174,7 @@ func updateUser(db *gorm.DB, id uint, r UpdateRequest) (*User, error) {
 		updates["password"] = hash
 	}
 	if r.Role != nil {
-		if !validRole(*r.Role) {
+		if !ValidRole(*r.Role) {
 			return nil, echo.NewHTTPError(http.StatusBadRequest, "role inválido")
 		}
 		updates["role"] = r.Role
@@ -172,9 +190,9 @@ func updateUser(db *gorm.DB, id uint, r UpdateRequest) (*User, error) {
 	return u, nil
 }
 
-// parte lógica para atualizar o user registrado no token jwt
+// atualiza o user salvo no token jwt usando UpdateRequest e o retorna
 func updateUserMe(db *gorm.DB, c *echo.Context, r UpdateRequest) (*User, error) {
-	me, err := parseMe(db, c)
+	me, err := ParseUser(db, c)
 	if err != nil {
 		return nil, err
 	}
@@ -205,9 +223,9 @@ func updateUserMe(db *gorm.DB, c *echo.Context, r UpdateRequest) (*User, error) 
 		}
 		updates["password"] = hash
 	}
-	if me.isAdmin() {
+	if me.IsAdmin() {
 		if r.Role != nil {
-			if !validRole(*r.Role) {
+			if !ValidRole(*r.Role) {
 				return nil, echo.NewHTTPError(http.StatusBadRequest, "role inválido")
 			}
 			updates["role"] = r.Role
@@ -224,7 +242,7 @@ func updateUserMe(db *gorm.DB, c *echo.Context, r UpdateRequest) (*User, error) 
 	return me, nil
 }
 
-// parte lógica para registrar o user
+// registra o user usando RegisterRequest e o retorna
 func registerUser(db *gorm.DB, r RegisterRequest) (*User, error) {
 	if r.Name == "" {
 		return nil, echo.NewHTTPError(http.StatusBadRequest, "nome é obrigatório")

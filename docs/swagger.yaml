@@ -1,5 +1,58 @@
 basePath: /api/v1
 definitions:
+  internal_task.CreateRequest:
+    properties:
+      description:
+        type: string
+      finish_at:
+        type: string
+      priority:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  internal_task.ErrorResponse:
+    properties:
+      message:
+        example: descrição do erro
+        type: string
+    type: object
+  internal_task.NewRequest:
+    properties:
+      description:
+        type: string
+      finish_at:
+        type: string
+      priority:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  internal_task.TaskResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      finish_at:
+        type: string
+      id:
+        type: integer
+      priority:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      user_id:
+        type: integer
+    type: object
   internal_user.CreateRequest:
     properties:
       email:
@@ -169,6 +222,127 @@ paths:
       summary: Registrar usuário
       tags:
       - auth
+  /tasks:
+    get:
+      description: Retorna uma lista com todas as tarefas cadastradas
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_task.TaskResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Listar tarefas
+      tags:
+      - tasks
+    post:
+      description: Cria uma nova tarefa. Requer admin
+      parameters:
+      - description: Dados da tarefa
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_task.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_task.TaskResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar tarefa
+      tags:
+      - tasks
+  /tasks/{id}:
+    get:
+      description: Retorna a tarefa com o id passado na url. Requer permissão de admin
+      parameters:
+      - description: ID da tarefa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_task.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Buscar tarefa por id
+      tags:
+      - tasks
+  /tasks/new:
+    post:
+      description: Cria uma nova tarefa relacionada ao usuário salvo no token jwt
+      parameters:
+      - description: Dados da tarefa
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_task.NewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_task.TaskResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Criar tarefa para usuário autenticado
+      tags:
+      - tasks
   /users:
     get:
       description: Retorna uma lista com todos os usuários cadastrados

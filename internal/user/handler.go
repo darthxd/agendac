@@ -38,7 +38,7 @@ func (h *Handler) RegisterRoutes(api *echo.Group) {
 	auth.POST("/register", h.register)
 }
 
-// getAll godoc
+// getAllUser godoc
 //
 //	@Summary		Listar usuários
 //	@Description	Retorna uma lista com todos os usuários cadastrados
@@ -68,7 +68,7 @@ func (h *Handler) getAll(c *echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
-// getOne godoc
+// getOneUser godoc
 //
 //	@Summary		Buscar usuário por id
 //	@Description	Retorna o usuário com o id passado na url. Requer permissão de admin
@@ -82,7 +82,12 @@ func (h *Handler) getAll(c *echo.Context) error {
 //	@Failure		404	{object}	ErrorResponse
 //	@Router			/users/{id} [get]
 func (h *Handler) getOne(c *echo.Context) error {
-	if err := verifyAdmin(h.db, c); err != nil {
+	me, err := ParseUser(h.db, c)
+	if err != nil {
+		return err
+	}
+
+	if err := me.VerifyAdmin(); err != nil {
 		return err
 	}
 
@@ -91,15 +96,22 @@ func (h *Handler) getOne(c *echo.Context) error {
 		return err
 	}
 
-	u, err := getById(h.db, uint(id))
+	u, err := GetById(h.db, uint(id))
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, u)
+	res := UserResponse{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+		Role:  u.Role,
+	}
+
+	return c.JSON(http.StatusOK, res)
 }
 
-// getMe godoc
+// getMeUser godoc
 //
 //	@Summary		Buscar usuário autenticado
 //	@Description	Retorna o usuário salvo no jwt da requisição
@@ -112,15 +124,22 @@ func (h *Handler) getOne(c *echo.Context) error {
 //	@Failure		500	{object}	ErrorResponse
 //	@Router			/users/me [get]
 func (h *Handler) getMe(c *echo.Context) error {
-	me, err := parseMe(h.db, c)
+	u, err := ParseUser(h.db, c)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, me)
+	res := UserResponse{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+		Role:  u.Role,
+	}
+
+	return c.JSON(http.StatusOK, res)
 }
 
-// create godoc
+// createUser godoc
 //
 //	@Summary		Criar usuário
 //	@Description	Cria um novo usuário e o retorna. Requer permissão de admin
@@ -135,7 +154,12 @@ func (h *Handler) getMe(c *echo.Context) error {
 //	@Failure		409		{object}	ErrorResponse
 //	@Router			/users [post]
 func (h *Handler) create(c *echo.Context) error {
-	if err := verifyAdmin(h.db, c); err != nil {
+	me, err := ParseUser(h.db, c)
+	if err != nil {
+		return err
+	}
+
+	if err := me.VerifyAdmin(); err != nil {
 		return err
 	}
 
@@ -159,7 +183,7 @@ func (h *Handler) create(c *echo.Context) error {
 	return c.JSON(http.StatusCreated, res)
 }
 
-// update godoc
+// updateUser godoc
 //
 //	@Summary		Atualizar usuário
 //	@Description	Atualiza o usuário com o id passado na url e o retorna. Requer permissão de admin
@@ -176,7 +200,12 @@ func (h *Handler) create(c *echo.Context) error {
 //	@Failure		409		{object}	ErrorResponse
 //	@Router			/users/{id} [put]
 func (h *Handler) update(c *echo.Context) error {
-	if err := verifyAdmin(h.db, c); err != nil {
+	me, err := ParseUser(h.db, c)
+	if err != nil {
+		return err
+	}
+
+	if err := me.VerifyAdmin(); err != nil {
 		return err
 	}
 
@@ -205,7 +234,7 @@ func (h *Handler) update(c *echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
-// updateMe godoc
+// updateMeUser godoc
 //
 //	@Summary		Atualizar usuário autenticado
 //	@Description	Atualiza o usuário salvo no jwt da requisição. Um usuário só pode alterar seu role caso ele mesmo seja admin
@@ -241,7 +270,7 @@ func (h *Handler) updateMe(c *echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
-// delete godoc
+// deleteUser godoc
 //
 //	@Summary		Deletar usuário
 //	@Description	Deleta o usuário com o id passado na url. Requer permissão de admin
@@ -255,7 +284,12 @@ func (h *Handler) updateMe(c *echo.Context) error {
 //	@Failure		404	{object}	ErrorResponse
 //	@Router			/users/{id} [delete]
 func (h *Handler) delete(c *echo.Context) error {
-	if err := verifyAdmin(h.db, c); err != nil {
+	me, err := ParseUser(h.db, c)
+	if err != nil {
+		return err
+	}
+
+	if err := me.VerifyAdmin(); err != nil {
 		return err
 	}
 
@@ -264,7 +298,7 @@ func (h *Handler) delete(c *echo.Context) error {
 		return err
 	}
 
-	u, err := getById(h.db, uint(id))
+	u, err := GetById(h.db, uint(id))
 	if err != nil {
 		return err
 	}
@@ -302,7 +336,7 @@ func (h *Handler) login(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "usuário ou senha incorretos")
 	}
 
-	token, err := auth.GenerateToken(u.ID, u.Role)
+	token, err := auth.GenerateToken(u.ID)
 	if err != nil {
 		return err
 	}

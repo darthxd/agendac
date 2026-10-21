@@ -1,17 +1,19 @@
 package user
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 const (
 	DefaultRole = "default"
 	AdminRole   = "admin"
 )
 
-func validRole(role string) bool {
-	return role == DefaultRole || role == AdminRole
+func ValidRole(r string) bool {
+	return r == DefaultRole || r == AdminRole
 }
 
-func (u User) isAdmin() bool {
+func (u User) IsAdmin() bool {
 	return u.Role == AdminRole
 }
 
