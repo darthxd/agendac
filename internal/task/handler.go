@@ -1,6 +1,7 @@
 package task
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/darthxd/agendac/internal/user"
@@ -25,6 +26,8 @@ func (h *Handler) RegisterRoutes(api *echo.Group) {
 	tasks.GET("", h.getAll)
 	tasks.GET("/:id", h.getOne)
 	tasks.POST("", h.create)
+	tasks.PATCH("/:id", h.update)
+	tasks.DELETE("/:id", h.delete)
 
 	tasks.POST("/new", h.new)
 }
@@ -49,16 +52,7 @@ func (h *Handler) getAll(c *echo.Context) error {
 
 	res := make([]TaskResponse, len(tasks))
 	for i, t := range tasks {
-		res[i] = TaskResponse{
-			ID:          t.ID,
-			UserID:      t.UserID,
-			Title:       t.Title,
-			Description: *t.Description,
-			CreatedAt:   t.CreatedAt,
-			FinishAt:    t.FinishAt,
-			Status:      t.Status,
-			Priority:    t.Priority,
-		}
+		res[i] = bindResponse(&t)
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -97,17 +91,7 @@ func (h *Handler) getOne(c *echo.Context) error {
 		return err
 	}
 
-	res := TaskResponse{
-		ID:          t.ID,
-		UserID:      t.UserID,
-		Title:       t.Title,
-		Description: *t.Description,
-		CreatedAt:   t.CreatedAt,
-		FinishAt:    t.FinishAt,
-		Status:      t.Status,
-		Priority:    t.Priority,
-	}
-
+	res := bindResponse(t)
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -143,17 +127,7 @@ func (h *Handler) create(c *echo.Context) error {
 		return err
 	}
 
-	res := TaskResponse{
-		ID:          t.ID,
-		UserID:      t.UserID,
-		Title:       t.Title,
-		Description: *t.Description,
-		CreatedAt:   t.CreatedAt,
-		FinishAt:    t.FinishAt,
-		Status:      t.Status,
-		Priority:    t.Priority,
-	}
-
+	res := bindResponse(t)
 	return c.JSON(http.StatusCreated, res)
 }
 
@@ -180,16 +154,97 @@ func (h *Handler) new(c *echo.Context) error {
 		return err
 	}
 
-	res := TaskResponse{
-		ID:          t.ID,
-		UserID:      t.UserID,
-		Title:       t.Title,
-		Description: *t.Description,
-		CreatedAt:   t.CreatedAt,
-		FinishAt:    t.FinishAt,
-		Status:      t.Status,
-		Priority:    t.Priority,
+	res := bindResponse(t)
+	return c.JSON(http.StatusCreated, res)
+}
+
+// updateTask godoc
+//
+//	@Summary		Atualiza tarefa
+//	@Description	Atualiza uma tarefa. Caso o usuário não seja admin, ele só pode alterar suas próprias tarefas
+//	@Tags			tasks
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		int				true	"ID da tarefa"
+//	@Param			request	body		UpdateRequest	true	"Dados da tarefa"
+//	@Success		200		{object}	TaskResponse
+//	@Failure		401		{object}	ErrorResponse
+//	@Failure		500		{object}	ErrorResponse
+//	@Router			/tasks/{id} [patch]
+func (h *Handler) update(c *echo.Context) error {
+	me, err := user.ParseUser(h.db, c)
+	if err != nil {
+		return err
 	}
 
-	return c.JSON(http.StatusCreated, res)
+	tid, err := parseId(c)
+	if err != nil {
+		return err
+	}
+
+	tprev, err := GetById(h.db, tid)
+	if err != nil {
+		return err
+	}
+
+	if me.ID != tprev.UserID {
+		if err := me.VerifyAdmin(); err != nil {
+			return err
+		}
+	}
+
+	var r UpdateRequest
+	if err := c.Bind(&r); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "corpo da requisição inválido")
+	}
+
+	t, err := updateTask(h.db, tid, r)
+	if err != nil {
+		return err
+	}
+
+	res := bindResponse(t)
+	return c.JSON(http.StatusOK, res)
+}
+
+// deleteTask godoc
+//
+//	@Summary		Deletar tarefa
+//	@Description	Deleta a tarefa com o id passado na url. Caso o usuário não seja admin, ele só pode deletar suas próprias tarefas
+//	@Tags			tasks
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		int	true	"ID da tarefa"
+//	@Success		200	{object}	MessageResponse
+//	@Failure		400	{object}	ErrorResponse
+//	@Failure		401	{object}	ErrorResponse
+//	@Failure		404	{object}	ErrorResponse
+//	@Router			/tasks/{id} [delete]
+func (h *Handler) delete(c *echo.Context) error {
+	me, err := user.ParseUser(h.db, c)
+	if err != nil {
+		return err
+	}
+
+	tid, err := parseId(c)
+	if err != nil {
+		return err
+	}
+
+	t, err := GetById(h.db, tid)
+	if err != nil {
+		return err
+	}
+
+	if me.ID != t.UserID {
+		if err := me.VerifyAdmin(); err != nil {
+			return err
+		}
+	}
+
+	if err := h.db.Delete(&t).Error; err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": fmt.Sprintf("tarefa com id %d deletado com sucesso", tid)})
 }

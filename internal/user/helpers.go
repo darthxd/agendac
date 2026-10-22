@@ -81,6 +81,15 @@ func (u User) VerifyAdmin() error {
 	return nil
 }
 
+func bindResponse(u *User) UserResponse {
+	return UserResponse{
+		ID:    u.ID,
+		Name:  u.Name,
+		Email: u.Email,
+		Role:  u.Role,
+	}
+}
+
 // retorna o user pelo id
 func GetById(db *gorm.DB, id uint) (*User, error) {
 	var u User

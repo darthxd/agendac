@@ -35,6 +35,7 @@ type Task struct {
 	FinishAt    time.Time `json:"finish_at"`
 	Status      string    `json:"status"`
 	Priority    string    `json:"priority"`
+	Color       string    `json:"color"`
 }
 
 // dtos
@@ -45,6 +46,7 @@ type CreateRequest struct {
 	FinishAt    string  `json:"finish_at"`
 	Status      *string `json:"status"`
 	Priority    *string `json:"priority"`
+	Color       string  `json:"color"`
 }
 
 type NewRequest struct {
@@ -53,6 +55,16 @@ type NewRequest struct {
 	FinishAt    string  `json:"finish_at"`
 	Status      *string `json:"status"`
 	Priority    *string `json:"priority"`
+	Color       string  `json:"color"`
+}
+
+type UpdateRequest struct {
+	Title       *string `json:"title"`
+	Description *string `json:"description"`
+	FinishAt    *string `json:"finish_at"`
+	Status      *string `json:"status"`
+	Priority    *string `json:"priority"`
+	Color       *string `json:"color"`
 }
 
 type TaskResponse struct {
@@ -64,6 +76,7 @@ type TaskResponse struct {
 	FinishAt    time.Time `json:"finish_at"`
 	Status      string    `json:"status"`
 	Priority    string    `json:"priority"`
+	Color       string    `json:"color"`
 }
 
 // ErrorResponse representa o corpo retornado pelo echo em caso de erro (echo.HTTPError)

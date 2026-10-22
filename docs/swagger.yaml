@@ -2,6 +2,8 @@ basePath: /api/v1
 definitions:
   internal_task.CreateRequest:
     properties:
+      color:
+        type: string
       description:
         type: string
       finish_at:
@@ -21,8 +23,16 @@ definitions:
         example: descrição do erro
         type: string
     type: object
+  internal_task.MessageResponse:
+    properties:
+      message:
+        example: usuário com id 1 deletado com sucesso
+        type: string
+    type: object
   internal_task.NewRequest:
     properties:
+      color:
+        type: string
       description:
         type: string
       finish_at:
@@ -36,6 +46,8 @@ definitions:
     type: object
   internal_task.TaskResponse:
     properties:
+      color:
+        type: string
       created_at:
         type: string
       description:
@@ -52,6 +64,21 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  internal_task.UpdateRequest:
+    properties:
+      color:
+        type: string
+      description:
+        type: string
+      finish_at:
+        type: string
+      priority:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
     type: object
   internal_user.CreateRequest:
     properties:
@@ -281,6 +308,39 @@ paths:
       tags:
       - tasks
   /tasks/{id}:
+    delete:
+      description: Deleta a tarefa com o id passado na url. Caso o usuário não seja
+        admin, ele só pode deletar suas próprias tarefas
+      parameters:
+      - description: ID da tarefa
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_task.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Deletar tarefa
+      tags:
+      - tasks
     get:
       description: Retorna a tarefa com o id passado na url. Requer permissão de admin
       parameters:
@@ -311,6 +371,41 @@ paths:
       security:
       - BearerAuth: []
       summary: Buscar tarefa por id
+      tags:
+      - tasks
+    patch:
+      description: Atualiza uma tarefa. Caso o usuário não seja admin, ele só pode
+        alterar suas próprias tarefas
+      parameters:
+      - description: ID da tarefa
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Dados da tarefa
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_task.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_task.TaskResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_task.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza tarefa
       tags:
       - tasks
   /tasks/new:
@@ -469,7 +564,7 @@ paths:
       summary: Buscar usuário por id
       tags:
       - users
-    put:
+    patch:
       consumes:
       - application/json
       description: Atualiza o usuário com o id passado na url e o retorna. Requer
@@ -541,7 +636,7 @@ paths:
       summary: Buscar usuário autenticado
       tags:
       - users
-    put:
+    patch:
       consumes:
       - application/json
       description: Atualiza o usuário salvo no jwt da requisição. Um usuário só pode

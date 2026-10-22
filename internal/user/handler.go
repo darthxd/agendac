@@ -29,8 +29,8 @@ func (h *Handler) RegisterRoutes(api *echo.Group) {
 	users.GET("/:id", h.getOne)
 	users.GET("/me", h.getMe)
 	users.POST("", h.create)
-	users.PUT("/:id", h.update)
-	users.PUT("/me", h.updateMe)
+	users.PATCH("/:id", h.update)
+	users.PATCH("/me", h.updateMe)
 	users.DELETE("/:id", h.delete)
 
 	auth := api.Group("/auth")
@@ -57,12 +57,7 @@ func (h *Handler) getAll(c *echo.Context) error {
 
 	res := make([]UserResponse, len(users))
 	for i, u := range users {
-		res[i] = UserResponse{
-			ID:    u.ID,
-			Name:  u.Name,
-			Email: u.Email,
-			Role:  u.Role,
-		}
+		res[i] = bindResponse(&u)
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -101,13 +96,7 @@ func (h *Handler) getOne(c *echo.Context) error {
 		return err
 	}
 
-	res := UserResponse{
-		ID:    u.ID,
-		Name:  u.Name,
-		Email: u.Email,
-		Role:  u.Role,
-	}
-
+	res := bindResponse(u)
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -129,13 +118,7 @@ func (h *Handler) getMe(c *echo.Context) error {
 		return err
 	}
 
-	res := UserResponse{
-		ID:    u.ID,
-		Name:  u.Name,
-		Email: u.Email,
-		Role:  u.Role,
-	}
-
+	res := bindResponse(u)
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -173,12 +156,7 @@ func (h *Handler) create(c *echo.Context) error {
 		return err
 	}
 
-	res := UserResponse{
-		ID:    u.ID,
-		Name:  u.Name,
-		Email: u.Email,
-		Role:  u.Role,
-	}
+	res := bindResponse(u)
 
 	return c.JSON(http.StatusCreated, res)
 }
@@ -198,7 +176,7 @@ func (h *Handler) create(c *echo.Context) error {
 //	@Failure		401		{object}	ErrorResponse
 //	@Failure		404		{object}	ErrorResponse
 //	@Failure		409		{object}	ErrorResponse
-//	@Router			/users/{id} [put]
+//	@Router			/users/{id} [patch]
 func (h *Handler) update(c *echo.Context) error {
 	me, err := ParseUser(h.db, c)
 	if err != nil {
@@ -224,13 +202,7 @@ func (h *Handler) update(c *echo.Context) error {
 		return err
 	}
 
-	res := UserResponse{
-		ID:    u.ID,
-		Name:  u.Name,
-		Email: u.Email,
-		Role:  u.Role,
-	}
-
+	res := bindResponse(u)
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -248,7 +220,7 @@ func (h *Handler) update(c *echo.Context) error {
 //	@Failure		401		{object}	ErrorResponse
 //	@Failure		404		{object}	ErrorResponse
 //	@Failure		409		{object}	ErrorResponse
-//	@Router			/users/me [put]
+//	@Router			/users/me [patch]
 func (h *Handler) updateMe(c *echo.Context) error {
 	var r UpdateRequest
 	if err := c.Bind(&r); err != nil {
@@ -260,13 +232,7 @@ func (h *Handler) updateMe(c *echo.Context) error {
 		return err
 	}
 
-	res := UserResponse{
-		ID:    me.ID,
-		Name:  me.Name,
-		Email: me.Email,
-		Role:  me.Role,
-	}
-
+	res := bindResponse(me)
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -341,13 +307,7 @@ func (h *Handler) login(c *echo.Context) error {
 		return err
 	}
 
-	res := UserResponse{
-		ID:    u.ID,
-		Name:  u.Name,
-		Email: u.Email,
-		Role:  u.Role,
-	}
-
+	res := bindResponse(u)
 	return c.JSON(http.StatusOK, LoginResponse{
 		UserResponse: res,
 		Token:        token,
@@ -377,12 +337,6 @@ func (h *Handler) register(c *echo.Context) error {
 		return err
 	}
 
-	res := UserResponse{
-		ID:    u.ID,
-		Name:  u.Name,
-		Email: u.Email,
-		Role:  u.Role,
-	}
-
+	res := bindResponse(u)
 	return c.JSON(http.StatusCreated, res)
 }
