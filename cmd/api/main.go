@@ -19,6 +19,7 @@ import (
 	"github.com/labstack/echo/v5"
 
 	_ "github.com/darthxd/agendac/docs"
+	echomiddleware "github.com/labstack/echo/v5/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger/v2"
 )
 
@@ -60,6 +61,7 @@ func run() error {
 	e := echo.New()
 	e.Logger = log
 	e.Use(middleware.Logger(log))
+	e.Use(echomiddleware.CORS("*"))
 
 	e.GET("/health", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
