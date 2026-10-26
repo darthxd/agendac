@@ -1,5 +1,6 @@
 .env
 swagger.bat
+build.bat
 *.db
 *.db-shm
 *.db-wal

@@ -35,8 +35,8 @@ func Load() (*Config, error) {
 		JWTSecret:      getEnv("JWT_SECRET", ""),
 		AllowedOrigins: splitCSV(getEnv("CORS_ALLOWED_ORIGINS", "*")),
 		AdminName:      getEnv("ADMIN_NAME", "admin"),
-		AdminEmail:     getEnv("ADMIN_EMAIL", ""),
-		AdminPassword:  getEnv("ADMIN_PASSWORD", ""),
+		AdminEmail:     getEnv("ADMIN_EMAIL", "admin@admin.com"),
+		AdminPassword:  getEnv("ADMIN_PASSWORD", "admin123"),
 	}
 
 	exp, err := time.ParseDuration(getEnv("JWT_EXPIRATION", "24h"))
