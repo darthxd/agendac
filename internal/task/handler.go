@@ -39,14 +39,26 @@ func (h *Handler) RegisterRoutes(api *echo.Group) {
 //	@Tags			tasks
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Success		200	{array}		TaskResponse
-//	@Failure		400	{object}	ErrorResponse
-//	@Failure		401	{object}	ErrorResponse
-//	@Failure		404	{object}	ErrorResponse
+//	@Param			status		query		string	false	"status da tarefa"
+//	@Param			priority	query		string	false	"priority da tarefa"
+//	@Param			user_id		query		int		false	"id do usuário"
+//	@Param			q			query		string	false	"termo para pesquisa (titulo e descrição)"
+//	@Success		200			{array}		TaskResponse
+//	@Failure		400			{object}	ErrorResponse
+//	@Failure		401			{object}	ErrorResponse
+//	@Failure		404			{object}	ErrorResponse
 //	@Router			/tasks [get]
 func (h *Handler) getAll(c *echo.Context) error {
+	var f TaskFilter
+
+	if err := c.Bind(&f); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "erro ao processar os filtros da pesquisa")
+	}
+
+	query := f.ApplyFilters(h.db)
+
 	var tasks []Task
-	if err := h.db.Find(&tasks).Error; err != nil {
+	if err := query.Preload("User").Find(&tasks).Error; err != nil {
 		return err
 	}
 

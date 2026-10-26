@@ -61,7 +61,7 @@ func run() error {
 	e := echo.New()
 	e.Logger = log
 	e.Use(middleware.Logger(log))
-	e.Use(echomiddleware.CORS("*"))
+	e.Use(echomiddleware.CORS(cfg.AllowedOrigins...))
 
 	e.GET("/health", func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})

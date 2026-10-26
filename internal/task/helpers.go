@@ -21,6 +21,25 @@ func parseId(c *echo.Context) (uint, error) {
 	return uint(id), nil
 }
 
+func (f TaskFilter) ApplyFilters(db *gorm.DB) *gorm.DB {
+	query := db.Model(&Task{})
+
+	if f.Status != "" {
+		query = query.Where("status = ?", f.Status)
+	}
+	if f.Priority != "" {
+		query = query.Where("priority = ?", f.Priority)
+	}
+	if f.UserID != 0 {
+		query = query.Where("user_id = ?", f.UserID)
+	}
+	if f.SearchTerm != "" {
+		query = query.Where("title LIKE ? OR description LIKE ?", "%"+f.SearchTerm+"%", "%"+f.SearchTerm+"%")
+	}
+
+	return query
+}
+
 func bindResponse(t *Task) TaskResponse {
 	return TaskResponse{
 		ID:          t.ID,

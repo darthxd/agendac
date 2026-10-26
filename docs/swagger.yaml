@@ -252,6 +252,23 @@ paths:
   /tasks:
     get:
       description: Retorna uma lista com todas as tarefas cadastradas
+      parameters:
+      - description: status da tarefa
+        in: query
+        name: status
+        type: string
+      - description: priority da tarefa
+        in: query
+        name: priority
+        type: string
+      - description: id do usuário
+        in: query
+        name: user_id
+        type: integer
+      - description: termo para pesquisa (titulo e descrição)
+        in: query
+        name: q
+        type: string
       produces:
       - application/json
       responses:

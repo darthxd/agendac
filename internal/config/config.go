@@ -27,7 +27,6 @@ type Config struct {
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
-	// cria uma struct Config e salva seu endereço de memória na variável "cfg"
 	cfg := &Config{
 		Env:            strings.ToLower(getEnv("APP_ENV", "development")),
 		Port:           getEnv("PORT", "8080"),

@@ -79,6 +79,13 @@ type TaskResponse struct {
 	Color       string    `json:"color"`
 }
 
+type TaskFilter struct {
+	Status     string `query:"status"`
+	Priority   string `query:"priority"`
+	UserID     uint   `query:"user_id"`
+	SearchTerm string `query:"q"`
+}
+
 // ErrorResponse representa o corpo retornado pelo echo em caso de erro (echo.HTTPError)
 type ErrorResponse struct {
 	Message string `json:"message" example:"descrição do erro"`

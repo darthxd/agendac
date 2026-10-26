@@ -122,6 +122,32 @@ const docTemplate = `{
                     "tasks"
                 ],
                 "summary": "Listar tarefas",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "status da tarefa",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "priority da tarefa",
+                        "name": "priority",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "id do usuário",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "termo para pesquisa (titulo e descrição)",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
